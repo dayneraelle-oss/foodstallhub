@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 
 from app.core.auth import (
     ROLE_ADMIN,
+    ROLE_SUPER_ADMIN,
     ROLE_VENDOR,
     get_current_user,
     require_roles,
@@ -28,12 +29,15 @@ router = APIRouter(prefix="/stalls", tags=["stalls"])
 
 def _stall_out(stall) -> StallOut:
     out = StallOut.model_validate(stall)
-    out.avg_rating = mongo_repo.average_rating_for_stall(stall.id)
+    try:
+        out.avg_rating = mongo_repo.average_rating_for_stall(stall.id)
+    except Exception:
+        out.avg_rating = None
     return out
 
 
 def _ensure_can_manage_stall(user: User, stall) -> None:
-    if user.role == ROLE_ADMIN:
+    if user.role in (ROLE_ADMIN, ROLE_SUPER_ADMIN):
         return
     if user.role != ROLE_VENDOR or stall.owner_id != user.id:
         raise AppError(403, "You do not own this stall")
@@ -53,6 +57,7 @@ def list_all_stalls(
         city=city,
         cuisine=cuisine,
         is_open=is_open,
+        approved_only=True,
         skip=skip,
         limit=limit,
     )
@@ -62,7 +67,7 @@ def list_all_stalls(
 @router.get("/{stall_id}", response_model=StallOut)
 def get_one_stall(stall_id: int, db: Session = Depends(get_db)) -> StallOut:
     stall = get_stall(db, stall_id)
-    if stall is None:
+    if stall is None or not stall.is_approved:
         raise AppError(404, "Stall not found")
     return _stall_out(stall)
 
@@ -93,6 +98,7 @@ def create_a_stall(
         latitude=payload.latitude,
         longitude=payload.longitude,
         image_url=payload.image_url,
+        is_approved=user.role != ROLE_VENDOR,
     )
     return _stall_out(stall)
 

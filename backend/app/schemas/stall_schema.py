@@ -42,5 +42,6 @@ class StallOut(BaseModel):
     longitude: Optional[float] = None
     image_url: Optional[str] = None
     is_open: bool
+    is_approved: bool = True
     created_at: datetime
     avg_rating: Optional[float] = None

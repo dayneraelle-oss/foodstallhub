@@ -3,18 +3,26 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
-from app.core.auth import ROLE_ADMIN, ROLE_VENDOR, get_current_user, require_roles
+from app.core.auth import (
+    ROLE_ADMIN,
+    ROLE_SUPER_ADMIN,
+    ROLE_VENDOR,
+    get_current_user,
+    require_roles,
+)
 from app.models.user import User
 from app.repositories.postgres_repo import (
+    bulk_create_menu_items,
     create_menu_item,
     delete_menu_item,
+    delete_menu_items_by_stall,
     get_db,
     get_menu_item,
     get_stall,
     list_menu_items_by_stall,
     update_menu_item,
 )
-from app.schemas.menu_schema import MenuItemCreate, MenuItemOut, MenuItemUpdate
+from app.schemas.menu_schema import MenuItemBulkCreate, MenuItemCreate, MenuItemOut, MenuItemUpdate
 from app.utils.error_handler import AppError
 
 router = APIRouter(tags=["menu"])
@@ -24,7 +32,7 @@ def _ensure_manages_stall(user: User, stall_id: int, db: Session) -> None:
     stall = get_stall(db, stall_id)
     if stall is None:
         raise AppError(404, "Stall not found")
-    if user.role == ROLE_ADMIN:
+    if user.role in (ROLE_ADMIN, ROLE_SUPER_ADMIN):
         return
     if user.role == ROLE_VENDOR and stall.owner_id == user.id:
         return
@@ -37,7 +45,8 @@ def list_menu(
     include_unavailable: bool = False,
     db: Session = Depends(get_db),
 ) -> List[MenuItemOut]:
-    if get_stall(db, stall_id) is None:
+    stall = get_stall(db, stall_id)
+    if stall is None or not stall.is_approved:
         raise AppError(404, "Stall not found")
 
     items = list_menu_items_by_stall(
@@ -69,8 +78,48 @@ def add_menu_item(
         price=payload.price,
         category=payload.category,
         image_url=payload.image_url,
+        tags=payload.tags,
+        prep_time_minutes=payload.prep_time_minutes,
+        serving_size=payload.serving_size,
     )
     return MenuItemOut.model_validate(item)
+
+
+@router.post(
+    "/stalls/{stall_id}/menu/batch",
+    response_model=List[MenuItemOut],
+    status_code=status.HTTP_201_CREATED,
+)
+def add_menu_batch(
+    stall_id: int,
+    payload: List[MenuItemCreate],
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(ROLE_VENDOR, ROLE_ADMIN)),
+) -> List[MenuItemOut]:
+    if not payload:
+        raise AppError(400, "Menu must contain at least one item")
+    _ensure_manages_stall(user, stall_id, db)
+
+    items = bulk_create_menu_items(db, stall_id=stall_id, items=[p.model_dump() for p in payload])
+    return [MenuItemOut.model_validate(i) for i in items]
+
+
+@router.put("/stalls/{stall_id}/menu", response_model=List[MenuItemOut])
+def replace_menu(
+    stall_id: int,
+    payload: MenuItemBulkCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(ROLE_VENDOR, ROLE_ADMIN)),
+) -> List[MenuItemOut]:
+    _ensure_manages_stall(user, stall_id, db)
+
+    delete_menu_items_by_stall(db, stall_id)
+    items = bulk_create_menu_items(
+        db,
+        stall_id=stall_id,
+        items=[i.model_dump() for i in payload.items],
+    )
+    return [MenuItemOut.model_validate(i) for i in items]
 
 
 @router.put("/menu/{item_id}", response_model=MenuItemOut)

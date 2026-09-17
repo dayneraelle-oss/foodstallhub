@@ -56,6 +56,16 @@ def initiate_payment(
     )
 
 
+def settle_cod(order_id: str, amount: float) -> PaymentResult:
+    """Mark a cash-on-delivery payment as collected once the order is delivered."""
+    logger.info("COD collected for order %s (amount=%.2f)", order_id, amount)
+    return PaymentResult(
+        payment_status=PaymentStatus.paid,
+        reference_id=f"COD-COL-{order_id[:12].upper()}",
+        message="Cash collected on delivery",
+    )
+
+
 def refund(order_id: str, amount: float, *, reference_id: str) -> bool:
     """Issue a refund for a cancelled/failed order. Stub: always succeeds."""
     logger.info("Refund %s for order %s (amount=%.2f)", reference_id, order_id, amount)

@@ -15,6 +15,9 @@ from app.repositories.postgres_repo import (
     get_stall,
 )
 from app.utils.error_handler import AppError
+from app.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 router = APIRouter(prefix="/analytics", tags=["analytics"])
 
@@ -73,9 +76,14 @@ def platform_overview(
     db: Session = Depends(get_db),
     _admin: User = Depends(require_roles(ROLE_ADMIN)),
 ) -> PlatformOverview:
+    try:
+        orders_count = mongo_repo.count_orders()
+    except Exception:
+        logger.warning("MongoDB unavailable; defaulting orders count to 0")
+        orders_count = 0
     return PlatformOverview(
         users_count=count_rows(db, User),
         stalls_count=count_rows(db, Stall),
         menu_items_count=count_rows(db, MenuItem),
-        orders_count=mongo_repo.count_orders(),
+        orders_count=orders_count,
     )

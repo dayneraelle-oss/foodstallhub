@@ -27,6 +27,9 @@ class Stall(Base):
     longitude: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     image_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     is_open: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, index=True)
+    is_approved: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false", index=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

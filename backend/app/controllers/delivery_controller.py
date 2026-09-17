@@ -3,11 +3,18 @@ from typing import List
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
-from app.core.auth import ROLE_ADMIN, ROLE_VENDOR, get_current_user, require_roles
+from app.core.auth import (
+    ROLE_ADMIN,
+    ROLE_SUPER_ADMIN,
+    ROLE_VENDOR,
+    get_current_user,
+    require_roles,
+)
 from app.models.user import User
 from app.repositories import mongo_repo
 from app.repositories.postgres_repo import get_db, get_stall
 from app.schemas.delivery_schema import (
+    DeliveryCancelOut,
     DeliveryTrackingOut,
     LocationPointIn,
     LocationPointOut,
@@ -22,7 +29,7 @@ def _can_view_delivery(user: User, order_id: str, db: Session) -> None:
     document = mongo_repo.get_order_by_id(order_id)
     if document is None:
         raise AppError(404, "Order not found")
-    if user.role == ROLE_ADMIN:
+    if user.role in (ROLE_ADMIN, ROLE_SUPER_ADMIN):
         return
     if document["user_id"] == user.id:
         return
@@ -50,6 +57,37 @@ def update_rider_location(
     if point is None:
         raise AppError(404, "Order not found")
     return LocationPointOut(**point)
+
+
+@router.post("/{order_id}/cancel", response_model=DeliveryCancelOut)
+def cancel_delivery(
+    order_id: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_roles(ROLE_VENDOR, ROLE_ADMIN)),
+) -> DeliveryCancelOut:
+    """Cancel an active delivery (admin/super admin, or owning vendor).
+
+    Marks the underlying order cancelled and returns the last known
+    tracking points.
+    """
+    document = mongo_repo.get_order_by_id(order_id)
+    if document is None:
+        raise AppError(404, "Order not found")
+    if user.role == ROLE_VENDOR:
+        stall = get_stall(db, document["stall_id"])
+        if stall is None or stall.owner_id != user.id:
+            raise AppError(403, "You do not own this stall")
+
+    updated = mongo_repo.cancel_order(order_id)
+    if updated is None:
+        raise AppError(404, "Order not found")
+
+    points = mongo_repo.get_delivery_tracking(order_id) or []
+    return DeliveryCancelOut(
+        order_id=order_id,
+        status=updated["status"],
+        delivery_tracking=[LocationPointOut(**p) for p in points],
+    )
 
 
 @router.get("/{order_id}/tracking", response_model=DeliveryTrackingOut)

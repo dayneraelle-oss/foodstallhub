@@ -15,8 +15,9 @@ from app.utils.error_handler import AppError
 ROLE_CUSTOMER = "customer"
 ROLE_VENDOR = "vendor"
 ROLE_ADMIN = "admin"
+ROLE_SUPER_ADMIN = "super_admin"
 
-ALL_ROLES = (ROLE_CUSTOMER, ROLE_VENDOR, ROLE_ADMIN)
+ALL_ROLES = (ROLE_CUSTOMER, ROLE_VENDOR, ROLE_ADMIN, ROLE_SUPER_ADMIN)
 
 _bearer_scheme = HTTPBearer(auto_error=True)
 
@@ -52,11 +53,14 @@ def get_current_user(
 
 
 def require_roles(*roles: str) -> Callable:
-    """Return a dependency that only allows the given roles."""
+    """Return a dependency that only allows the given roles.
+
+    A super admin bypasses every restriction and is always allowed.
+    """
 
     def _checker(user: User = Depends(get_current_user)) -> User:
-        if user.role not in roles:
-            raise AppError(403, "You do not have permission to perform this action")
-        return user
+        if user.role in roles or user.role == ROLE_SUPER_ADMIN:
+            return user
+        raise AppError(403, "You do not have permission to perform this action")
 
     return _checker

@@ -4,15 +4,43 @@ from typing import Literal, Optional
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 RoleInput = Literal["customer", "vendor"]
-RoleOutput = Literal["customer", "vendor", "admin"]
+RoleOutput = Literal["customer", "vendor", "admin", "super_admin"]
+RoleAssignable = Literal["customer", "vendor", "admin"]
 
 
-class UserCreate(BaseModel):
+class CustomerRegister(BaseModel):
     email: EmailStr
     full_name: str = Field(min_length=1, max_length=100)
     password: str = Field(min_length=8, max_length=128)
     phone: Optional[str] = Field(default=None, max_length=30)
-    role: RoleInput = "customer"
+
+
+class VendorRegister(BaseModel):
+    email: EmailStr
+    full_name: str = Field(min_length=1, max_length=100)
+    password: str = Field(min_length=8, max_length=128)
+    phone: Optional[str] = Field(default=None, max_length=30)
+
+
+class AdminRegister(BaseModel):
+    email: EmailStr
+    full_name: str = Field(min_length=1, max_length=100)
+    password: str = Field(min_length=8, max_length=128)
+    admin_key: str
+
+
+class SuperAdminRegister(BaseModel):
+    email: EmailStr
+    full_name: str = Field(min_length=1, max_length=100)
+    password: str = Field(min_length=8, max_length=128)
+    super_admin_key: str
+
+
+class AdminUserUpdate(BaseModel):
+    full_name: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    phone: Optional[str] = Field(default=None, max_length=30)
+    role: Optional[RoleAssignable] = None
+    is_active: Optional[bool] = None
 
 
 class UserLogin(BaseModel):

@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FoodStallHub Admin</title>
+<style>
+  :root {
+    --bg: #0f1221;
+    --panel: #1a1f36;
+    --panel2: #232942;
+    --border: #2e3552;
+    --text: #e6e9f5;
+    --muted: #8b93b5;
+    --accent: #6366f1;
+    --green: #22c55e;
+    --red: #ef4444;
+    --amber: #f59e0b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  .hidden { display: none !important; }
+
+  /* Login */
+  #login-view {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .login-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 40px 32px;
+    width: 100%;
+    max-width: 380px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.45);
+  }
+  .login-card h1 {
+    font-size: 22px;
+    margin-bottom: 4px;
+  }
+  .login-card .sub {
+    color: var(--muted);
+    font-size: 13px;
+    margin-bottom: 24px;
+  }
+  .login-card input {
+    width: 100%;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--panel2);
+    color: var(--text);
+    font-size: 14px;
+  }
+  .login-card input:focus { outline: 2px solid var(--accent); }
+
+  /* Layout */
+  #dash-view { display: flex; min-height: 100vh; }
+  aside {
+    width: 230px;
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    padding: 20px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  aside .brand {
+    font-weight: 700;
+    font-size: 17px;
+    padding: 6px 10px 18px;
+  }
+  aside .brand span { color: var(--accent); }
+  nav button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 11px 12px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 14px;
+    cursor: pointer;
+    transition: .15s;
+  }
+  nav button:hover { background: var(--panel2); color: var(--text); }
+  nav button.active { background: var(--accent); color: #fff; }
+  aside .spacer { flex: 1; }
+  #logout-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  #logout-btn:hover { border-color: var(--red); color: var(--red); }
+
+  main { flex: 1; padding: 28px 32px; overflow-x: auto; }
+  main h2 { font-size: 20px; margin-bottom: 20px; }
+
+  /* Stats cards */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .stat {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+  }
+  .stat .num { font-size: 28px; font-weight: 700; }
+  .stat .lbl { color: var(--muted); font-size: 13px; margin-top: 4px; }
+
+  /* Tables */
+  .table-wrap {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: auto;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  thead th {
+    text-align: left;
+    padding: 12px 16px;
+    color: var(--muted);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel2);
+    white-space: nowrap;
+  }
+  tbody td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: rgba(99,102,241,.06); }
+
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .badge.customer { background: rgba(34,197,94,.15); color: var(--green); }
+  .badge.vendor { background: rgba(245,158,11,.15); color: var(--amber); }
+  .badge.admin { background: rgba(99,102,241,.2); color: var(--accent); }
+  .badge.active { background: rgba(34,197,94,.15); color: var(--green); }
+  .badge.inactive { background: rgba(239,68,68,.15); color: var(--red); }
+
+  .role-filter {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  select {
+    padding: 9px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--panel2);
+    color: var(--text);
+    font-size: 13px;
+  }
+
+  .btn {
+    padding: 8px 14px;
+    border-radius: 9px;
+    border: 1px solid var(--border);
+    background: var(--panel2);
+    color: var(--text);
+    cursor: pointer;
+    font-size: 13px;
+  }
+  .btn:hover { border-color: var(--accent); }
+  .btn.green { color: var(--green); border-color: rgba(34,197,94,.4); }
+  .btn.red { color: var(--red); border-color: rgba(239,68,68,.4); }
+  .btn.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    font-weight: 600;
+    width: 100%;
+    padding: 12px;
+    margin-top: 6px;
+  }
+  .btn.primary:hover { background: #4f52e0; }
+
+  #login-msg, #toast {
+    font-size: 13px;
+    min-height: 18px;
+    margin-top: 8px;
+  }
+  #login-msg.error, #toast.error { color: var(--red); }
+  #login-msg.ok, #toast.ok { color: var(--green); }
+
+  #toast {
+    position: fixed;
+    top: 18px;
+    right: 18px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 16px;
+    opacity: 0;
+    transition: opacity .25s;
+    pointer-events: none;
+    z-index: 50;
+  }
+  #toast.show { opacity: 1; }
+
+  @media (max-width: 760px) {
+    #dash-view { flex-direction: column; }
+    aside { width: 100%; flex-direction: row; flex-wrap: wrap; align-items: center; }
+    aside .brand, aside .spacer { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Login -->
+<div id="login-view">
+  <div class="login-card">
+    <h1>FoodStallHub</h1>
+    <div class="sub">Admin Dashboard</div>
+    <div id="login-fields">
+      <input id="login-name" type="text" placeholder="Full name" class="hidden">
+      <input id="login-key" type="password" placeholder="Admin registration key" class="hidden">
+      <input id="login-email" type="email" placeholder="Admin email" autocomplete="username">
+      <input id="login-pass" type="password" placeholder="Password" autocomplete="current-password">
+    </div>
+    <button class="btn primary" id="login-btn" onclick="doLogin()">Sign in</button>
+    <button class="btn" id="register-toggle" style="width:100%;margin-top:10px;" onclick="toggleRegister()">Register new admin</button>
+    <div id="login-msg"></div>
+  </div>
+</div>
+
+<!-- Dashboard -->
+<div id="dash-view" class="hidden">
+  <aside>
+    <div class="brand">FoodStall<span>Hub</span></div>
+    <nav>
+      <button data-tab="overview" class="active" onclick="switchTab('overview')">Overview</button>
+      <button data-tab="customers" onclick="switchTab('customers')">Customers</button>
+      <button data-tab="vendors" onclick="switchTab('vendors')">Vendors</button>
+      <button data-tab="all" onclick="switchTab('all')">All Users</button>
+    </nav>
+    <div class="spacer"></div>
+    <div id="admin-user" style="font-size:12px;color:var(--muted);padding:0 12px 10px;"></div>
+    <button id="logout-btn" onclick="logout()">Log out</button>
+  </aside>
+
+  <main>
+    <section id="tab-overview">
+      <h2>Platform Overview</h2>
+      <div class="cards" id="overview-cards"></div>
+    </section>
+
+    <section id="tab-customers" class="hidden">
+      <h2>Customers</h2>
+      <div class="table-wrap" id="customers-wrap"></div>
+    </section>
+
+    <section id="tab-vendors" class="hidden">
+      <h2>Vendors</h2>
+      <div class="table-wrap" id="vendors-wrap"></div>
+    </section>
+
+    <section id="tab-all" class="hidden">
+      <h2>All Users</h2>
+      <div class="role-filter">
+        <label style="color:var(--muted);font-size:13px;">Role:</label>
+        <select id="all-role-filter" onchange="loadAllUsers()">
+          <option value="">all</option>
+          <option value="customer">customer</option>
+          <option value="vendor">vendor</option>
+          <option value="admin">admin</option>
+        </select>
+      </div>
+      <div class="table-wrap" id="all-wrap"></div>
+    </section>
+  </main>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const API = "/api/v1";
+let token = localStorage.getItem("fsh_admin_token") || "";
+let adminEmail = localStorage.getItem("fsh_admin_email") || "";
+let registerMode = false;
+
+function toggleRegister() {
+  registerMode = !registerMode;
+  const name = document.getElementById("login-name");
+  const key = document.getElementById("login-key");
+  const btn = document.getElementById("login-btn");
+  name.classList.toggle("hidden", !registerMode);
+  key.classList.toggle("hidden", !registerMode);
+  btn.textContent = registerMode ? "Register admin" : "Sign in";
+  document.getElementById("register-toggle").textContent = registerMode ? "Back to sign in" : "Register new admin";
+  document.getElementById("login-msg").textContent = "";
+}
+
+async function api(path, opts = {}) {
+  const headers = { "Content-Type": "application/json", ...(opts.headers || {}) };
+  if (token) headers["Authorization"] = "Bearer " + token;
+  const res = await fetch(API + path, { ...opts, headers });
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 401 && !path.includes("login")) {
+    toast("Session expired — please sign in again", "error");
+    logout();
+    throw new Error("unauthorized");
+  }
+  return { status: res.status, ok: res.ok, data };
+}
+
+function toast(msg, type = "ok") {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.className = type === "error" ? "show error" : "show ok";
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove("show"), 3000);
+}
+
+async function doLogin() {
+  const email = document.getElementById("login-email").value.trim();
+  const pass = document.getElementById("login-pass").value;
+  const name = document.getElementById("login-name").value.trim();
+  const key = document.getElementById("login-key").value;
+  const msg = document.getElementById("login-msg");
+  msg.textContent = ""; msg.className = "";
+  if (!email || !pass) { msg.textContent = "Enter email and password"; msg.className = "error"; return; }
+
+  if (registerMode) {
+    if (!name || !key) { msg.textContent = "Enter full name and admin registration key"; msg.className = "error"; return; }
+    try {
+      const r = await api("/auth/admin/register", {
+        method: "POST",
+        body: JSON.stringify({ email, full_name: name, password: pass, admin_key: key }),
+      });
+      if (!r.ok) {
+        msg.textContent = (r.data && r.data.detail) || "Registration failed";
+        msg.className = "error";
+        return;
+      }
+      toast("Admin created — please sign in");
+      toggleRegister();
+      document.getElementById("login-msg").textContent = "";
+      return;
+    } catch (e) { msg.textContent = "Network error"; msg.className = "error"; return; }
+  }
+
+  try {
+    const r = await api("/auth/admin/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password: pass }),
+    });
+    if (!r.ok) {
+      msg.textContent = (r.data && r.data.detail) || "Login failed";
+      msg.className = "error";
+      return;
+    }
+    token = r.data.access_token;
+    adminEmail = email;
+    localStorage.setItem("fsh_admin_token", token);
+    localStorage.setItem("fsh_admin_email", email);
+    enterDashboard();
+  } catch (e) { msg.textContent = "Network error"; msg.className = "error"; }
+}
+
+function logout() {
+  token = "";
+  localStorage.removeItem("fsh_admin_token");
+  localStorage.removeItem("fsh_admin_email");
+  document.getElementById("dash-view").classList.add("hidden");
+  document.getElementById("login-view").classList.remove("hidden");
+}
+
+function enterDashboard() {
+  document.getElementById("login-view").classList.add("hidden");
+  document.getElementById("dash-view").classList.remove("hidden");
+  document.getElementById("admin-user").textContent = adminEmail;
+  switchTab("overview");
+}
+
+function switchTab(tab) {
+  document.querySelectorAll("main section").forEach(s => s.classList.add("hidden"));
+  document.getElementById("tab-" + tab).classList.remove("hidden");
+  document.querySelectorAll("nav button").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
+  if (tab === "overview") loadOverview();
+  if (tab === "customers") loadUsers("customers");
+  if (tab === "vendors") loadUsers("vendors");
+  if (tab === "all") loadAllUsers();
+}
+
+function badge(role) { return `<span class="badge ${role}">${role}</span>`; }
+function statusBadge(active) { return active ? '<span class="badge active">active</span>' : '<span class="badge inactive">inactive</span>'; }
+
+async function loadOverview() {
+  const wrap = document.getElementById("overview-cards");
+  wrap.innerHTML = "Loading…";
+  try {
+    const r = await api("/analytics/overview");
+    if (!r.ok) { wrap.innerHTML = "<p style='color:var(--red)'>Failed to load overview</p>"; return; }
+    const s = r.data;
+    wrap.innerHTML = `
+      <div class="stat"><div class="num">${s.users_count}</div><div class="lbl">Users</div></div>
+      <div class="stat"><div class="num">${s.stalls_count}</div><div class="lbl">Stalls</div></div>
+      <div class="stat"><div class="num">${s.menu_items_count}</div><div class="lbl">Menu items</div></div>
+      <div class="stat"><div class="num">${s.orders_count}</div><div class="lbl">Orders</div></div>`;
+  } catch (e) { wrap.innerHTML = "<p style='color:var(--red)'>Failed to load overview</p>"; }
+}
+
+async function loadUsers(kind) {
+  const wrap = document.getElementById(kind + "-wrap");
+  wrap.innerHTML = "Loading…";
+  try {
+    const r = await api("/admin/users/" + kind);
+    if (!r.ok) { wrap.innerHTML = "<p style='color:var(--red)'>Failed to load " + kind + "</p>"; return; }
+    wrap.innerHTML = renderTable(r.data);
+  } catch (e) { wrap.innerHTML = "<p style='color:var(--red)'>Failed to load</p>"; }
+}
+
+async function loadAllUsers() {
+  const wrap = document.getElementById("all-wrap");
+  const role = document.getElementById("all-role-filter").value;
+  wrap.innerHTML = "Loading…";
+  try {
+    const q = role ? "?role=" + encodeURIComponent(role) : "";
+    const r = await api("/admin/users" + q);
+    if (!r.ok) { wrap.innerHTML = "<p style='color:var(--red)'>Failed to load users</p>"; return; }
+    wrap.innerHTML = renderTable(r.data);
+  } catch (e) { wrap.innerHTML = "<p style='color:var(--red)'>Failed to load</p>"; }
+}
+
+function renderTable(users) {
+  if (!users.length) return "<p style='padding:16px;color:var(--muted)'>No users found.</p>";
+  const rows = users.map(u => `
+    <tr>
+      <td>${u.id}</td>
+      <td>${u.email}</td>
+      <td>${u.full_name}</td>
+      <td>${badge(u.role)}</td>
+      <td>${statusBadge(u.is_active)}</td>
+      <td>${u.phone || "—"}</td>
+      <td>
+        <button class="btn ${u.is_active ? "red" : "green"}" onclick="toggleActive(${u.id}, ${u.is_active})">${u.is_active ? "Disable" : "Enable"}</button>
+        <button class="btn red" onclick="deleteUser(${u.id})">Delete</button>
+      </td>
+    </tr>`).join("");
+  return `<table>
+    <thead><tr><th>ID</th><th>Email</th><th>Name</th><th>Role</th><th>Status</th><th>Phone</th><th>Actions</th></tr></thead>
+    <tbody>${rows}</tbody></table>`;
+}
+
+async function toggleActive(userId, isActive) {
+  const action = isActive ? "disable" : "enable";
+  if (!confirm(action + " user #" + userId + "?")) return;
+  try {
+    const r = await api("/admin/users/" + userId, { method: "PATCH", body: JSON.stringify({ is_active: !isActive }) });
+    if (!r.ok) { toast((r.data && r.data.detail) || "Update failed", "error"); return; }
+    toast("User " + action + "d");
+    refreshCurrentTab();
+  } catch (e) {}
+}
+
+async function deleteUser(userId) {
+  if (!confirm("Permanently delete user #" + userId + "?")) return;
+  try {
+    const r = await api("/admin/users/" + userId, { method: "DELETE" });
+    if (!r.ok) { toast((r.data && r.data.detail) || "Delete failed", "error"); return; }
+    toast("User deleted");
+    refreshCurrentTab();
+  } catch (e) {}
+}
+
+function currentTab() {
+  return (document.querySelector("nav button.active") || {}).dataset.tab || "overview";
+}
+function refreshCurrentTab() {
+  const t = currentTab();
+  if (t === "overview") loadOverview();
+  if (t === "customers") loadUsers("customers");
+  if (t === "vendors") loadUsers("vendors");
+  if (t === "all") loadAllUsers();
+}
+
+// Auto-enter dashboard if already signed in
+if (token) enterDashboard();
+</script>
+</body>
+</html>

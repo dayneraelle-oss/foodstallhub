@@ -19,3 +19,9 @@ class DeliveryTrackingOut(BaseModel):
     order_id: str
     points: List[LocationPointOut]
     distance_km: Optional[float] = None
+
+
+class DeliveryCancelOut(BaseModel):
+    order_id: str
+    status: str
+    delivery_tracking: List[LocationPointOut]

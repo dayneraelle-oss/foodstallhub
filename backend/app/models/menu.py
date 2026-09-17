@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Numeric, String, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Numeric, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models import Base
@@ -23,6 +23,9 @@ class MenuItem(Base):
     category: Mapped[Optional[str]] = mapped_column(String(80), nullable=True, index=True)
     image_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     is_available: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    tags: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    prep_time_minutes: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    serving_size: Mapped[Optional[str]] = mapped_column(String(80), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

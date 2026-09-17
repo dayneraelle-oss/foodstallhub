@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from app.core.auth import (
     ROLE_ADMIN,
+    ROLE_SUPER_ADMIN,
     ROLE_VENDOR,
     get_current_user,
     require_roles,
@@ -14,6 +15,8 @@ from app.core.auth import (
 from app.models.order import (
     CANCELLABLE_STATUSES,
     OrderStatus,
+    PaymentMethod,
+    PaymentStatus,
 )
 from app.models.user import User
 from app.repositories import mongo_repo
@@ -61,7 +64,7 @@ def _order_to_out(document: dict) -> OrderOut:
 
 
 def _can_view_order(user: User, document: dict, db: Session) -> bool:
-    if user.role == ROLE_ADMIN:
+    if user.role in (ROLE_ADMIN, ROLE_SUPER_ADMIN):
         return True
     if document["user_id"] == user.id:
         return True
@@ -78,6 +81,8 @@ def create_an_order(
     stall = get_stall(db, payload.stall_id)
     if stall is None:
         raise AppError(404, "Stall not found")
+    if not stall.is_approved:
+        raise AppError(400, "This stall is not yet registered")
     if not stall.is_open:
         raise AppError(400, "This stall is currently closed")
 
@@ -195,6 +200,20 @@ def update_order_status_endpoint(
     updated = mongo_repo.update_order_status(order_id, target.value)
     if updated is None:
         raise AppError(404, "Order not found")
+
+    # Promote cash-on-delivery to paid once the order is delivered (cash collected).
+    if (
+        target == OrderStatus.delivered
+        and document.get("payment_method") == PaymentMethod.cod.value
+        and document.get("payment_status") == PaymentStatus.pending.value
+    ):
+        settlement = payment_service.settle_cod(order_id, document["total"])
+        updated = mongo_repo.update_order_payment_status(
+            order_id, settlement.payment_status.value
+        )
+        if updated is None:
+            raise AppError(404, "Order not found")
+
     return _order_to_out(updated)
 
 
@@ -217,4 +236,37 @@ def cancel_an_order(
     updated = mongo_repo.cancel_order(order_id)
     if updated is None:
         raise AppError(404, "Order not found")
+    return _order_to_out(updated)
+
+
+@router.post("/{order_id}/admin-cancel", response_model=OrderOut)
+def admin_cancel_an_order(
+    order_id: str,
+    db: Session = Depends(get_db),
+    _admin: User = Depends(require_roles(ROLE_ADMIN)),
+) -> OrderOut:
+    """Admin/super admin cancel an order in any status.
+
+    The super admin role bypasses the role dependency, so both admin and
+    super admin can call this. Digital payments already collected are
+    refunded.
+    """
+    document = mongo_repo.get_order_by_id(order_id)
+    if document is None:
+        raise AppError(404, "Order not found")
+
+    updated = mongo_repo.cancel_order(order_id)
+    if updated is None:
+        raise AppError(404, "Order not found")
+
+    if (
+        document.get("payment_status") == PaymentStatus.paid.value
+        and document.get("payment_method") != PaymentMethod.cod.value
+    ):
+        payment_service.refund(
+            order_id,
+            document["total"],
+            reference_id=f"ADM-RF-{order_id[:12].upper()}",
+        )
+
     return _order_to_out(updated)

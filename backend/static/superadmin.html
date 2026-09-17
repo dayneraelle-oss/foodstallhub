@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>FoodStallHub Super Admin</title>
+<style>
+  :root {
+    --bg: #0b0d12;
+    --panel: #141824;
+    --panel2: #1d2233;
+    --border: #2a3147;
+    --text: #eef1fb;
+    --muted: #8a93b3;
+    --accent: #e11d48;
+    --accent2: #f43f5e;
+    --green: #22c55e;
+    --red: #ef4444;
+    --amber: #f59e0b;
+    --purple: #a78bfa;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  .hidden { display: none !important; }
+
+  /* Login */
+  #login-view {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .login-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 40px 32px;
+    width: 100%;
+    max-width: 380px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.5);
+  }
+  .login-card h1 { font-size: 22px; margin-bottom: 2px; }
+  .login-card .sub {
+    color: var(--accent2);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+  .login-card input {
+    width: 100%;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--panel2);
+    color: var(--text);
+    font-size: 14px;
+  }
+  .login-card input:focus { outline: 2px solid var(--accent); }
+
+  /* Layout */
+  #dash-view { display: flex; min-height: 100vh; }
+  aside {
+    width: 230px;
+    background: var(--panel);
+    border-right: 1px solid var(--border);
+    padding: 20px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  aside .brand { font-weight: 700; font-size: 17px; padding: 6px 10px 18px; }
+  aside .brand span { color: var(--accent2); }
+  aside .brand .tag {
+    display: block;
+    font-size: 10px;
+    color: var(--muted);
+    font-weight: 600;
+    letter-spacing: .18em;
+    margin-top: 3px;
+  }
+  nav button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 11px 12px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--muted);
+    font-size: 14px;
+    cursor: pointer;
+    transition: .15s;
+  }
+  nav button:hover { background: var(--panel2); color: var(--text); }
+  nav button.active { background: var(--accent); color: #fff; }
+  aside .spacer { flex: 1; }
+  #logout-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  #logout-btn:hover { border-color: var(--red); color: var(--red); }
+
+  main { flex: 1; padding: 28px 32px; overflow-x: auto; min-width: 0; }
+  main h2 { font-size: 20px; margin-bottom: 20px; }
+
+  /* Stats cards */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .stat {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+  }
+  .stat .num { font-size: 26px; font-weight: 700; }
+  .stat .lbl { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  .stat .num.pos { color: var(--green); }
+  .stat .num.warn { color: var(--amber); }
+  .stat .num.neg { color: var(--red); }
+
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+  @media (max-width: 900px) { .split { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+  }
+  .panel h3 { font-size: 14px; color: var(--muted); margin-bottom: 14px; text-transform: uppercase; letter-spacing: .06em; }
+  .breakdown-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+  .breakdown-row:last-child { border-bottom: none; }
+  .breakdown-row .k { flex: 1; text-transform: capitalize; }
+  .breakdown-row .v { color: var(--text); font-weight: 600; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+  .chip {
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    background: transparent;
+    cursor: pointer;
+  }
+  .chip:hover { border-color: var(--accent); color: var(--text); }
+  .chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  /* Filters */
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  select, input[type="search"] {
+    padding: 9px 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--panel2);
+    color: var(--text);
+    font-size: 13px;
+  }
+  input[type="search"] { min-width: 240px; }
+  ::placeholder { color: var(--muted); }
+
+  /* Tables */
+  .table-wrap {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: auto;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    text-align: left;
+    padding: 12px 14px;
+    color: var(--muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel2);
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+  }
+  tbody td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: rgba(225,29,72,.05); }
+  td.mono { font-family: Consolas, monospace; font-size: 12px; }
+  .items-cell { font-size: 12px; color: var(--muted); max-width: 260px; }
+  .items-cell b { color: var(--text); }
+
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .badge.pending { background: rgba(245,158,11,.15); color: var(--amber); }
+  .badge.confirmed { background: rgba(167,139,250,.15); color: var(--purple); }
+  .badge.preparing { background: rgba(99,102,241,.2); color: #818cf8; }
+  .badge.out_for_delivery { background: rgba(14,165,233,.15); color: #38bdf8; }
+  .badge.delivered { background: rgba(34,197,94,.15); color: var(--green); }
+  .badge.cancelled { background: rgba(239,68,68,.15); color: var(--red); }
+  .badge.paid { background: rgba(34,197,94,.15); color: var(--green); }
+  .badge.failed { background: rgba(239,68,68,.15); color: var(--red); }
+  .badge.customer { background: rgba(34,197,94,.15); color: var(--green); }
+  .badge.vendor { background: rgba(245,158,11,.15); color: var(--amber); }
+  .badge.admin { background: rgba(99,102,241,.2); color: #818cf8; }
+  .badge.super_admin { background: rgba(225,29,72,.18); color: var(--accent2); }
+  .badge.active { background: rgba(34,197,94,.15); color: var(--green); }
+  .badge.inactive { background: rgba(239,68,68,.15); color: var(--red); }
+  .badge.method { background: var(--panel2); color: var(--muted); }
+
+  .pager { display: flex; align-items: center; gap: 10px; margin-top: 16px; justify-content: flex-end; color: var(--muted); font-size: 13px; }
+  .btn {
+    padding: 8px 14px;
+    border-radius: 9px;
+    border: 1px solid var(--border);
+    background: var(--panel2);
+    color: var(--text);
+    cursor: pointer;
+    font-size: 13px;
+  }
+  .btn:hover { border-color: var(--accent); }
+  .btn.primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    font-weight: 600;
+    width: 100%;
+    padding: 12px;
+    margin-top: 6px;
+  }
+  .btn.primary:hover { background: var(--accent2); }
+
+  .empty { padding: 28px; text-align: center; color: var(--muted); }
+
+  #login-msg, #toast { font-size: 13px; min-height: 18px; margin-top: 8px; }
+  #login-msg.error, #toast.error { color: var(--red); }
+  #login-msg.ok, #toast.ok { color: var(--green); }
+
+  #toast {
+    position: fixed;
+    top: 18px;
+    right: 18px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 16px;
+    opacity: 0;
+    transition: opacity .25s;
+    pointer-events: none;
+    z-index: 50;
+  }
+  #toast.show { opacity: 1; }
+
+  @media (max-width: 760px) {
+    #dash-view { flex-direction: column; }
+    aside { width: 100%; flex-direction: row; flex-wrap: wrap; align-items: center; }
+    aside .brand, aside .spacer { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Login -->
+<div id="login-view">
+  <div class="login-card">
+    <h1>FoodStallHub</h1>
+    <div class="sub">Super Admin Control</div>
+    <div id="login-fields">
+      <input id="login-name" type="text" placeholder="Full name" class="hidden">
+      <input id="login-key" type="password" placeholder="Super admin registration key" class="hidden">
+      <input id="login-email" type="email" placeholder="Super admin email" autocomplete="username">
+      <input id="login-pass" type="password" placeholder="Password" autocomplete="current-password">
+    </div>
+    <button class="btn primary" id="login-btn" onclick="doLogin()">Sign in</button>
+    <button class="btn" id="register-toggle" style="width:100%;margin-top:10px;" onclick="toggleRegister()">Register super admin</button>
+    <div id="login-msg"></div>
+  </div>
+</div>
+
+<!-- Dashboard -->
+<div id="dash-view" class="hidden">
+  <aside>
+    <div class="brand">FoodStall<span>Hub</span><span class="tag">superadmin</span></div>
+    <nav>
+      <button data-tab="overview" class="active" onclick="switchTab('overview')">Overview</button>
+      <button data-tab="transactions" onclick="switchTab('transactions')">Transactions</button>
+      <button data-tab="users" onclick="switchTab('users')">Users</button>
+      <button data-tab="stalls" onclick="switchTab('stalls')">Stalls</button>
+      <button data-tab="menu" onclick="switchTab('menu')">Menu</button>
+    </nav>
+    <div class="spacer"></div>
+    <div id="admin-user" style="font-size:12px;color:var(--muted);padding:0 12px 10px;"></div>
+    <button id="logout-btn" onclick="logout()">Log out</button>
+  </aside>
+
+  <main>
+    <section id="tab-overview">
+      <h2>Platform Transaction Overview</h2>
+      <div class="cards" id="overview-cards"></div>
+      <div class="split">
+        <div class="panel">
+          <h3>Volume by payment method</h3>
+          <div id="by-method"></div>
+        </div>
+        <div class="panel">
+          <h3>Orders by status</h3>
+          <div id="by-status"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>Recent transactions</h3>
+        <div class="table-wrap" id="recent-wrap"></div>
+      </div>
+    </section>
+
+    <section id="tab-transactions" class="hidden">
+      <h2>All Transactions</h2>
+      <div class="filters">
+        <select id="tx-status-filter" onchange="loadTransactions()">
+          <option value="">order status: all</option>
+          <option>pending</option>
+          <option>confirmed</option>
+          <option>preparing</option>
+          <option>out_for_delivery</option>
+          <option>delivered</option>
+          <option>cancelled</option>
+        </select>
+        <select id="tx-pay-filter" onchange="loadTransactions()">
+          <option value="">payment status: all</option>
+          <option>pending</option>
+          <option>paid</option>
+          <option>failed</option>
+        </select>
+        <input type="search" id="tx-search" placeholder="Search email, stall or order id" oninput="applyLocalSearch()">
+      </div>
+      <div class="table-wrap" id="tx-wrap"></div>
+      <div class="pager">
+        <button class="btn" id="tx-prev" onclick="pageTransactions(-1)">Prev</button>
+        <span id="tx-page-info"></span>
+        <button class="btn" id="tx-next" onclick="pageTransactions(1)">Next</button>
+      </div>
+    </section>
+
+    <section id="tab-users" class="hidden">
+      <h2>Users</h2>
+      <div class="chips" id="users-chips">
+        <button class="chip active" data-role="">all</button>
+        <button class="chip" data-role="customer">customer</button>
+        <button class="chip" data-role="vendor">vendor</button>
+        <button class="chip" data-role="admin">admin</button>
+        <button class="chip" data-role="super_admin">super_admin</button>
+      </div>
+      <div class="table-wrap" id="users-wrap"></div>
+    </section>
+
+    <section id="tab-stalls" class="hidden">
+      <h2>Registered Stalls</h2>
+      <div class="filters">
+        <input type="search" id="stall-search" placeholder="Search name, city or cuisine" oninput="applyStallSearch()">
+      </div>
+      <div class="table-wrap" id="stalls-wrap"></div>
+      <div class="pager">
+        <button class="btn" id="stall-prev" onclick="pageStalls(-1)">Prev</button>
+        <span id="stall-page-info"></span>
+        <button class="btn" id="stall-next" onclick="pageStalls(1)">Next</button>
+      </div>
+    </section>
+
+    <section id="tab-menu" class="hidden">
+      <h2>Menu Items</h2>
+      <div class="filters">
+        <input type="search" id="menu-search" placeholder="Search name, stall or category" oninput="applyMenuSearch()">
+      </div>
+      <div class="table-wrap" id="menu-wrap"></div>
+      <div class="pager">
+        <button class="btn" id="menu-prev" onclick="pageMenu(-1)">Prev</button>
+        <span id="menu-page-info"></span>
+        <button class="btn" id="menu-next" onclick="pageMenu(1)">Next</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const API = "/api/v1";
+let token = localStorage.getItem("fsh_superadmin_token") || "";
+let adminEmail = localStorage.getItem("fsh_superadmin_email") || "";
+let registerMode = false;
+
+let txPage = 0;
+const TX_PAGE_SIZE = 100;
+let txCache = [];
+
+function toggleRegister() {
+  registerMode = !registerMode;
+  const name = document.getElementById("login-name");
+  const key = document.getElementById("login-key");
+  const btn = document.getElementById("login-btn");
+  name.classList.toggle("hidden", !registerMode);
+  key.classList.toggle("hidden", !registerMode);
+  btn.textContent = registerMode ? "Register super admin" : "Sign in";
+  document.getElementById("register-toggle").textContent = registerMode ? "Back to sign in" : "Register super admin";
+  document.getElementById("login-msg").textContent = "";
+}
+
+async function api(path, opts = {}) {
+  const headers = { "Content-Type": "application/json", ...(opts.headers || {}) };
+  if (token) headers["Authorization"] = "Bearer " + token;
+  const res = await fetch(API + path, { ...opts, headers });
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 401 && !path.includes("login")) {
+    toast("Session expired — please sign in again", "error");
+    logout();
+    throw new Error("unauthorized");
+  }
+  return { status: res.status, ok: res.ok, data };
+}
+
+function toast(msg, type = "ok") {
+  const el = document.getElementById("toast");
+  el.textContent = msg;
+  el.className = type === "error" ? "show error" : "show ok";
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove("show"), 3200);
+}
+
+function fmtMoney(n) {
+  return "₱" + Number(n || 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function esc(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function badge(cl, text) { return `<span class="badge ${cl}">${esc(text)}</span>`; }
+
+async function doLogin() {
+  const email = document.getElementById("login-email").value.trim();
+  const pass = document.getElementById("login-pass").value;
+  const name = document.getElementById("login-name").value.trim();
+  const key = document.getElementById("login-key").value;
+  const msg = document.getElementById("login-msg");
+  msg.textContent = ""; msg.className = "";
+  if (!email || !pass) { msg.textContent = "Enter email and password"; msg.className = "error"; return; }
+
+  if (registerMode) {
+    if (!name || !key) { msg.textContent = "Enter full name and super admin registration key"; msg.className = "error"; return; }
+    try {
+      const r = await api("/auth/superadmin/register", {
+        method: "POST",
+        body: JSON.stringify({ email, full_name: name, password: pass, super_admin_key: key }),
+      });
+      if (!r.ok) {
+        msg.textContent = (r.data && r.data.detail) || "Registration failed";
+        msg.className = "error";
+        return;
+      }
+      toast("Super admin created — please sign in");
+      toggleRegister();
+      document.getElementById("login-msg").textContent = "";
+      return;
+    } catch (e) { msg.textContent = "Network error"; msg.className = "error"; return; }
+  }
+
+  try {
+    const r = await api("/auth/superadmin/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password: pass }),
+    });
+    if (!r.ok) {
+      msg.textContent = (r.data && r.data.detail) || "Login failed";
+      msg.className = "error";
+      return;
+    }
+    token = r.data.access_token;
+    adminEmail = email;
+    localStorage.setItem("fsh_superadmin_token", token);
+    localStorage.setItem("fsh_superadmin_email", email);
+    enterDashboard();
+  } catch (e) { msg.textContent = "Network error"; msg.className = "error"; }
+}
+
+function logout() {
+  token = "";
+  localStorage.removeItem("fsh_superadmin_token");
+  localStorage.removeItem("fsh_superadmin_email");
+  document.getElementById("dash-view").classList.add("hidden");
+  document.getElementById("login-view").classList.remove("hidden");
+}
+
+function enterDashboard() {
+  document.getElementById("login-view").classList.add("hidden");
+  document.getElementById("dash-view").classList.remove("hidden");
+  document.getElementById("admin-user").textContent = adminEmail;
+  switchTab("overview");
+}
+
+function switchTab(tab) {
+  document.querySelectorAll("main section").forEach(s => s.classList.add("hidden"));
+  document.getElementById("tab-" + tab).classList.remove("hidden");
+  document.querySelectorAll("nav button").forEach(b => b.classList.toggle("active", b.dataset.tab === tab));
+  if (tab === "overview") loadOverview();
+  if (tab === "transactions") loadTransactions();
+  if (tab === "users") loadUsers();
+  if (tab === "stalls") loadStalls();
+  if (tab === "menu") loadMenu();
+}
+
+// ── Overview ──────────────────────────────────────────────────────────────────
+
+async function loadOverview() {
+  const cards = document.getElementById("overview-cards");
+  const methodEl = document.getElementById("by-method");
+  const statusEl = document.getElementById("by-status");
+  const recent = document.getElementById("recent-wrap");
+  cards.innerHTML = "Loading…";
+  try {
+    const r = await api("/superadmin/transactions/summary");
+    if (!r.ok) { cards.innerHTML = `<p class="empty" style="color:var(--red)">Failed to load overview</p>`; return; }
+    const s = r.data;
+    cards.innerHTML = `
+      <div class="stat"><div class="num">${s.transactions_count}</div><div class="lbl">Transactions</div></div>
+      <div class="stat"><div class="num pos">${fmtMoney(s.revenue)}</div><div class="lbl">Net revenue</div></div>
+      <div class="stat"><div class="num">${fmtMoney(s.gross_volume)}</div><div class="lbl">Gross volume</div></div>
+      <div class="stat"><div class="num">${s.users_count}</div><div class="lbl">Users</div></div>
+      <div class="stat"><div class="num">${s.stall_count}</div><div class="lbl">Stalls registered</div></div>
+      <div class="stat"><div class="num">${s.menu_items_count}</div><div class="lbl">Menu items</div></div>
+      <div class="stat"><div class="num pos">${fmtMoney(s.paid_amount)}</div><div class="lbl">Paid</div></div>
+      <div class="stat"><div class="num warn">${fmtMoney(s.pending_amount)}</div><div class="lbl">Pending</div></div>
+      <div class="stat"><div class="num neg">${fmtMoney(s.cancelled_amount)} · ${s.cancelled_count}</div><div class="lbl">Cancelled / refunds</div></div>`;
+    methodEl.innerHTML = (s.by_payment_method.length
+      ? s.by_payment_method.map(m => `
+        <div class="breakdown-row"><span class="k">${badge("method", m.key)}</span>
+        <span class="v">${m.count} orders</span><span class="v">${fmtMoney(m.amount)}</span></div>`).join("")
+      : '<span class="empty">No data</span>');
+    statusEl.innerHTML = (s.by_status.length
+      ? s.by_status.map(st => `
+        <div class="breakdown-row"><span class="k">${badge(st.key, st.key)}</span>
+        <span class="v">${st.count}</span></div>`).join("")
+      : '<span class="empty">No data</span>');
+  } catch (e) { cards.innerHTML = '<p class="empty" style="color:var(--red)">Failed to load overview</p>'; }
+
+  try {
+    const tr = await api("/superadmin/transactions?limit=10");
+    recent.innerHTML = renderTxTable(tr.ok ? tr.data : []);
+  } catch (e) { recent.innerHTML = '<p class="empty" style="color:var(--red)">Failed to load</p>'; }
+}
+
+// ── Transactions ──────────────────────────────────────────────────────────────
+
+function renderTxTable(rows) {
+  if (!rows || !rows.length) return '<p class="empty">No transactions found.</p>';
+  return `<table>
+    <thead><tr>
+      <th>Order</th><th>Date</th><th>Customer</th><th>Stall</th>
+      <th>Items</th><th>Total</th><th>Method</th><th>Payment</th><th>Status</th><th></th>
+    </tr></thead>
+    <tbody>${rows.map(t => `
+      <tr>
+        <td class="mono" title="${esc(t.order_id)}">${esc(t.order_id.slice(0, 10))}…</td>
+        <td>${esc(new Date(t.created_at).toLocaleString())}</td>
+        <td>${esc(t.user_email)}</td>
+        <td>${esc(t.stall_name)}</td>
+        <td class="items-cell">${t.items.map(i => `${esc(i.name)} ×${i.quantity}`).join("<br>")}</td>
+        <td><b>${fmtMoney(t.total)}</b></td>
+        <td>${badge("method", t.payment_method)}</td>
+        <td>${badge(t.payment_status === "paid" ? "paid" : t.payment_status === "failed" ? "failed" : "pending", t.payment_status)}</td>
+        <td>${badge(t.status, t.status)}</td>
+        <td>${t.status !== "cancelled" && t.status !== "delivered" ? `<button class="btn red" title="Cancel this order" onclick='cancelTransaction("${esc(t.order_id)}")'>Cancel</button>` : "—"}</td>
+      </tr>`).join("")}</tbody>
+  </table>`;
+}
+
+async function cancelTransaction(orderId) {
+  if (!confirm("Cancel order " + orderId + "? A refund is issued for paid digital payments.")) return;
+  try {
+    const r = await api(`/orders/${orderId}/admin-cancel`, { method: "POST" });
+    if (!r.ok) { toast((r.data && r.data.detail) || "Cancel failed", "error"); return; }
+    toast(`Order ${orderId.slice(0, 10)}… cancelled`);
+    if (currentTab() === "transactions") loadTransactions(); else loadOverview();
+  } catch (e) {}
+}
+
+async function loadTransactions() {
+  const wrap = document.getElementById("tx-wrap");
+  wrap.innerHTML = "Loading…";
+  const st = document.getElementById("tx-status-filter").value;
+  const ps = document.getElementById("tx-pay-filter").value;
+  const params = new URLSearchParams({ limit: String(TX_PAGE_SIZE) });
+  if (st) params.set("status", st);
+  if (ps) params.set("payment_status", ps);
+  try {
+    const r = await api("/superadmin/transactions?" + params.toString());
+    if (!r.ok) { wrap.innerHTML = '<p class="empty" style="color:var(--red)">Failed to load transactions</p>'; return; }
+    txCache = r.data;
+    txPage = 0;
+    renderTxPage();
+  } catch (e) { wrap.innerHTML = '<p class="empty" style="color:var(--red)">Failed to load</p>'; }
+}
+
+function applyLocalSearch() {
+  const q = document.getElementById("tx-search").value.trim().toLowerCase();
+  if (!q) { renderTxPage(); return; }
+  const filtered = txCache.filter(t =>
+    (t.user_email || "").toLowerCase().includes(q) ||
+    (t.stall_name || "").toLowerCase().includes(q) ||
+    (t.order_id || "").toLowerCase().includes(q)
+  );
+  document.getElementById("tx-wrap").innerHTML = renderTxTable(filtered) + '<p class="empty">Filtered locally from the loaded page.</p>';
+}
+
+function renderTxPage() {
+  const start = txPage * 100;
+  const page = txCache.slice(start, start + 100);
+  document.getElementById("tx-wrap").innerHTML = renderTxTable(page);
+  document.getElementById("tx-page-info").textContent = `${start + 1}–${start + page.length} of ${txCache.length}`;
+  document.getElementById("tx-prev").disabled = txPage === 0;
+  document.getElementById("tx-next").disabled = start + 100 >= txCache.length;
+}
+
+function pageTransactions(dir) {
+  txPage += dir;
+  if (txPage < 0) txPage = 0;
+  const q = document.getElementById("tx-search").value.trim();
+  if (q) applyLocalSearch(); else renderTxPage();
+}
+
+// ── Users ─────────────────────────────────────────────────────────────────────
+
+function renderUsersTable(users) {
+  if (!users.length) return '<p class="empty">No users found.</p>';
+  const rows = users.map(u => `
+    <tr>
+      <td>${u.id}</td>
+      <td>${esc(u.email)}</td>
+      <td>${esc(u.full_name)}</td>
+      <td>${badge(u.role, u.role)}</td>
+      <td>${u.is_active ? '<span class="badge active">active</span>' : '<span class="badge inactive">inactive</span>'}</td>
+      <td>${esc(u.phone || "—")}</td>
+      <td>${esc(new Date(u.created_at).toLocaleDateString())}</td>
+    </tr>`).join("");
+  return `<table>
+    <thead><tr><th>ID</th><th>Email</th><th>Name</th><th>Role</th><th>Status</th><th>Phone</th><th>Joined</th></tr></thead>
+    <tbody>${rows}</tbody></table>`;
+}
+
+async function loadUsers() {
+  const wrap = document.getElementById("users-wrap");
+  const role = (document.querySelector("#users-chips .chip.active") || {}).dataset.role || "";
+  wrap.innerHTML = "Loading…";
+  try {
+    const q = role ? "?role=" + encodeURIComponent(role) : "";
+    const r = await api("/admin/users" + q);
+    if (!r.ok) { wrap.innerHTML = `<p class="empty" style="color:var(--red)">${esc(r.data?.detail || "Failed to load users")}</p>`; return; }
+    wrap.innerHTML = renderUsersTable(r.data);
+  } catch (e) { wrap.innerHTML = '<p class="empty" style="color:var(--red)">Failed to load</p>'; }
+}
+
+document.getElementById("users-chips").addEventListener("click", (e) => {
+  const chip = e.target.closest(".chip");
+  if (!chip) return;
+  document.querySelectorAll("#users-chips .chip").forEach(c => c.classList.remove("active"));
+  chip.classList.add("active");
+  loadUsers();
+});
+
+// ── Stalls ────────────────────────────────────────────────────────────────────
+
+const STALL_PAGE_SIZE = 100;
+let stallPage = 0;
+let stallCache = [];
+
+function renderStallsTable(rows) {
+  if (!rows || !rows.length) return '<p class="empty">No stalls registered yet.</p>';
+  return `<table>
+    <thead><tr>
+      <th>ID</th><th>Name</th><th>Cuisine</th><th>City</th><th>Address</th>
+      <th>Owner</th><th>Menu items</th><th>Open</th><th>Approval</th><th>Registered</th><th></th>
+    </tr></thead>
+    <tbody>${rows.map(s => `
+      <tr>
+        <td>${s.id}</td>
+        <td><b>${esc(s.name)}</b></td>
+        <td>${esc(s.cuisine || "—")}</td>
+        <td>${esc(s.city)}</td>
+        <td>${esc(s.address)}</td>
+        <td>${esc(s.owner_name)}<br><small style="color:var(--muted)">${esc(s.owner_email)}</small></td>
+        <td>${s.items_count}</td>
+        <td>${s.is_open ? '<span class="badge active">open</span>' : '<span class="badge inactive">closed</span>'}</td>
+        <td>${s.is_approved ? '<span class="badge active">registered</span>' : '<span class="badge pending">pending</span>'}</td>
+        <td>${esc(new Date(s.created_at).toLocaleDateString())}</td>
+        <td>
+          ${s.is_approved
+            ? `<button class="btn" style="color:var(--red)" title="Reject this stall" onclick='setStallApproval(${s.id}, false, "${esc(s.name)}")'>Reject</button>`
+            : `<button class="btn" style="color:var(--green)" title="Approve/register this stall" onclick='setStallApproval(${s.id}, true, "${esc(s.name)}")'>Approve</button>`}
+        </td>
+      </tr>`).join("")}</tbody>
+  </table>`;
+}
+
+async function setStallApproval(stallId, approved, name) {
+  const action = approved ? "approve" : "reject";
+  if (!confirm(`Do you want to ${action} stall "${name || "#" + stallId}"?`)) return;
+  try {
+    const r = await api(`/superadmin/stalls/${stallId}/approval`, {
+      method: "POST",
+      body: JSON.stringify({ is_approved: approved }),
+    });
+    if (!r.ok) { toast((r.data && r.data.detail) || "Action failed", "error"); return; }
+    toast(approved ? `Stall "${name || "#" + stallId}" registered` : `Stall "${name || "#" + stallId}" rejected`);
+    loadStalls();
+  } catch (e) {}
+}
+
+async function loadStalls() {
+  const wrap = document.getElementById("stalls-wrap");
+  wrap.innerHTML = "Loading…";
+  try {
+    const r = await api(`/superadmin/stalls?limit=${STALL_PAGE_SIZE}`);
+    if (!r.ok) { wrap.innerHTML = `<p class="empty" style="color:var(--red)">${esc(r.data?.detail || "Failed to load stalls")}</p>`; return; }
+    stallCache = r.data;
+    stallPage = 0;
+    renderStallPage();
+  } catch (e) { wrap.innerHTML = '<p class="empty" style="color:var(--red)">Failed to load</p>'; }
+}
+
+function applyStallSearch() {
+  const q = document.getElementById("stall-search").value.trim().toLowerCase();
+  if (!q) { renderStallPage(); return; }
+  const filtered = stallCache.filter(s =>
+    (s.name || "").toLowerCase().includes(q) ||
+    (s.city || "").toLowerCase().includes(q) ||
+    (s.cuisine || "").toLowerCase().includes(q) ||
+    (s.owner_email || "").toLowerCase().includes(q)
+  );
+  document.getElementById("stalls-wrap").innerHTML = renderStallsTable(filtered) + '<p class="empty">Filtered locally from the loaded page.</p>';
+}
+
+function renderStallPage() {
+  const start = stallPage * STALL_PAGE_SIZE;
+  const page = stallCache.slice(start, start + STALL_PAGE_SIZE);
+  document.getElementById("stalls-wrap").innerHTML = renderStallsTable(page);
+  document.getElementById("stall-page-info").textContent = `${start + 1}–${start + page.length} of ${stallCache.length}`;
+  document.getElementById("stall-prev").disabled = stallPage === 0;
+  document.getElementById("stall-next").disabled = start + STALL_PAGE_SIZE >= stallCache.length;
+}
+
+function pageStalls(dir) {
+  stallPage += dir;
+  if (stallPage < 0) stallPage = 0;
+  const q = document.getElementById("stall-search").value.trim();
+  if (q) applyStallSearch(); else renderStallPage();
+}
+
+// ── Menu ──────────────────────────────────────────────────────────────────────
+
+const MENU_PAGE_SIZE = 100;
+let menuPage = 0;
+let menuCache = [];
+
+function renderMenuTable(rows) {
+  if (!rows || !rows.length) return '<p class="empty">No menu items found.</p>';
+  return `<table>
+    <thead><tr>
+      <th>ID</th><th>Item</th><th>Category</th><th>Price</th>
+      <th>Stall</th><th>Tags</th><th>Prep (min)</th><th>Serving</th><th>Status</th>
+    </tr></thead>
+    <tbody>${rows.map(m => `
+      <tr>
+        <td>${m.id}</td>
+        <td><b>${esc(m.name)}</b></td>
+        <td>${esc(m.category || "—")}</td>
+        <td><b>${fmtMoney(m.price)}</b></td>
+        <td>${esc(m.stall_name)}</td>
+        <td>${esc(m.tags || "—")}</td>
+        <td>${m.prep_time_minutes ?? "—"}</td>
+        <td>${esc(m.serving_size || "—")}</td>
+        <td>${m.is_available ? '<span class="badge active">available</span>' : '<span class="badge inactive">unavailable</span>'}</td>
+      </tr>`).join("")}</tbody>
+  </table>`;
+}
+
+async function loadMenu() {
+  const wrap = document.getElementById("menu-wrap");
+  wrap.innerHTML = "Loading…";
+  try {
+    const r = await api(`/superadmin/menu?limit=${MENU_PAGE_SIZE}`);
+    if (!r.ok) { wrap.innerHTML = `<p class="empty" style="color:var(--red)">${esc(r.data?.detail || "Failed to load menu")}</p>`; return; }
+    menuCache = r.data;
+    menuPage = 0;
+    renderMenuPage();
+  } catch (e) { wrap.innerHTML = '<p class="empty" style="color:var(--red)">Failed to load</p>'; }
+}
+
+function applyMenuSearch() {
+  const q = document.getElementById("menu-search").value.trim().toLowerCase();
+  if (!q) { renderMenuPage(); return; }
+  const filtered = menuCache.filter(m =>
+    (m.name || "").toLowerCase().includes(q) ||
+    (m.stall_name || "").toLowerCase().includes(q) ||
+    (m.category || "").toLowerCase().includes(q)
+  );
+  document.getElementById("menu-wrap").innerHTML = renderMenuTable(filtered) + '<p class="empty">Filtered locally from the loaded page.</p>';
+}
+
+function renderMenuPage() {
+  const start = menuPage * MENU_PAGE_SIZE;
+  const page = menuCache.slice(start, start + MENU_PAGE_SIZE);
+  document.getElementById("menu-wrap").innerHTML = renderMenuTable(page);
+  document.getElementById("menu-page-info").textContent = `${start + 1}–${start + page.length} of ${menuCache.length}`;
+  document.getElementById("menu-prev").disabled = menuPage === 0;
+  document.getElementById("menu-next").disabled = start + MENU_PAGE_SIZE >= menuCache.length;
+}
+
+function pageMenu(dir) {
+  menuPage += dir;
+  if (menuPage < 0) menuPage = 0;
+  const q = document.getElementById("menu-search").value.trim();
+  if (q) applyMenuSearch(); else renderMenuPage();
+}
+
+// Auto-enter dashboard if already signed in
+if (token) enterDashboard();
+</script>
+</body>
+</html>

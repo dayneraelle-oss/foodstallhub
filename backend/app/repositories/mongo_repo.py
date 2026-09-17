@@ -6,6 +6,9 @@ from typing import Any, Dict, List, Optional
 from pymongo import ASCENDING, DESCENDING, MongoClient
 
 from app.config import get_settings
+from app.utils.logger import get_logger
+
+logger = get_logger(__name__)
 
 _client: Optional[MongoClient] = None
 _db: Any = None
@@ -26,13 +29,16 @@ def get_mongo_db():
 
 
 def _ensure_indexes(db) -> None:
-    db.orders.create_index([("user_id", ASCENDING)])
-    db.orders.create_index([("stall_id", ASCENDING)])
-    db.orders.create_index([("stall_id", ASCENDING), ("status", ASCENDING)])
-    db.orders.create_index([("created_at", DESCENDING)])
-    db.reviews.create_index([("stall_id", ASCENDING)])
-    db.reviews.create_index([("order_id", ASCENDING)], unique=True)
-    db.reviews.create_index([("user_id", ASCENDING)])
+    try:
+        db.orders.create_index([("user_id", ASCENDING)])
+        db.orders.create_index([("stall_id", ASCENDING)])
+        db.orders.create_index([("stall_id", ASCENDING), ("status", ASCENDING)])
+        db.orders.create_index([("created_at", DESCENDING)])
+        db.reviews.create_index([("stall_id", ASCENDING)])
+        db.reviews.create_index([("order_id", ASCENDING)], unique=True)
+        db.reviews.create_index([("user_id", ASCENDING)])
+    except Exception:
+        logger.warning("Failed to ensure MongoDB indexes (will retry next connection)")
 
 
 def utc_now_iso() -> str:
@@ -114,9 +120,111 @@ def cancel_order(order_id: str) -> Optional[Dict[str, Any]]:
     return update_order_status(order_id, "cancelled")
 
 
+def update_order_payment_status(
+    order_id: str, payment_status: str
+) -> Optional[Dict[str, Any]]:
+    db = get_mongo_db()
+    result = db.orders.update_one(
+        {"_id": order_id},
+        {"$set": {"payment_status": payment_status, "updated_at": utc_now_iso()}},
+    )
+    if result.matched_count == 0:
+        return None
+    return db.orders.find_one({"_id": order_id})
+
+
 def count_orders() -> int:
     db = get_mongo_db()
     return db.orders.count_documents({})
+
+
+def list_all_orders(
+    skip: int = 0,
+    limit: int = 100,
+    status: Optional[str] = None,
+    payment_status: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    """Every order on the platform — the full transaction ledger."""
+    db = get_mongo_db()
+    query: Dict[str, Any] = {}
+    if status:
+        query["status"] = status
+    if payment_status:
+        query["payment_status"] = payment_status
+    return (
+        list(
+            db.orders.find(query)
+            .sort("created_at", DESCENDING)
+            .skip(skip)
+            .limit(limit)
+        )
+    )
+
+
+def transactions_summary() -> Dict[str, Any]:
+    """Platform-wide transaction totals grouped by payment and status."""
+    db = get_mongo_db()
+
+    payout_filter = {"$cond": [{"$eq": ["$status", "cancelled"]}, 0, "$total"]}
+    totals_pipeline = [
+        {
+            "$group": {
+                "_id": None,
+                "transactions_count": {"$sum": 1},
+                "gross_volume": {"$sum": "$total"},
+                "revenue": {"$sum": payout_filter},
+                "paid_amount": {
+                    "$sum": {"$cond": [{"$eq": ["$payment_status", "paid"]}, "$total", 0]}
+                },
+                "pending_amount": {
+                    "$sum": {"$cond": [{"$eq": ["$payment_status", "pending"]}, "$total", 0]}
+                },
+                "cancelled_amount": {
+                    "$sum": {"$cond": [{"$eq": ["$status", "cancelled"]}, "$total", 0]}
+                },
+                "cancelled_count": {
+                    "$sum": {"$cond": [{"$eq": ["$status", "cancelled"]}, 1, 0]}
+                },
+            }
+        }
+    ]
+    totals = list(db.orders.aggregate(totals_pipeline))
+    row = totals[0] if totals else {}
+
+    by_method = list(
+        db.orders.aggregate(
+            [
+                {"$group": {"_id": "$payment_method", "count": {"$sum": 1}, "amount": {"$sum": "$total"}}},
+            ]
+        )
+    )
+    by_status = list(
+        db.orders.aggregate(
+            [
+                {"$group": {"_id": "$status", "count": {"$sum": 1}}},
+            ]
+        )
+    )
+
+    def _amount(value) -> float:
+        return round(float(value), 2)
+
+    return {
+        "transactions_count": int(row.get("transactions_count", 0)),
+        "gross_volume": _amount(row.get("gross_volume", 0.0)),
+        "revenue": _amount(row.get("revenue", 0.0)),
+        "paid_amount": _amount(row.get("paid_amount", 0.0)),
+        "pending_amount": _amount(row.get("pending_amount", 0.0)),
+        "cancelled_amount": _amount(row.get("cancelled_amount", 0.0)),
+        "cancelled_count": int(row.get("cancelled_count", 0)),
+        "by_payment_method": [
+            {"key": m["_id"], "count": int(m["count"]), "amount": _amount(m["amount"])}
+            for m in by_method
+        ],
+        "by_status": [
+            {"key": s["_id"], "count": int(s["count"])} for s in by_status
+        ],
+    }
 
 
 # ---------------------------------------------------------------- reviews

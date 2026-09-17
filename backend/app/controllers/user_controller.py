@@ -1,6 +1,6 @@
-from typing import List
+from typing import List, Optional
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.core.auth import ROLE_ADMIN, get_current_user, require_roles
@@ -36,9 +36,30 @@ def update_me(
 
 @router.get("", response_model=List[UserOut])
 def list_all_users(
+    role: Optional[List[str]] = Query(default=None, description="Filter by role(s); repeat for multiple"),
     skip: int = 0,
     limit: int = 100,
     db: Session = Depends(get_db),
     _admin: User = Depends(require_roles(ROLE_ADMIN)),
 ) -> List[UserOut]:
-    return [UserOut.model_validate(u) for u in list_users(db, skip=skip, limit=limit)]
+    return [UserOut.model_validate(u) for u in list_users(db, skip=skip, limit=limit, roles=role)]
+
+
+@router.get("/customers", response_model=List[UserOut])
+def list_customers(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    _admin: User = Depends(require_roles(ROLE_ADMIN)),
+) -> List[UserOut]:
+    return [UserOut.model_validate(u) for u in list_users(db, skip=skip, limit=limit, roles=["customer"])]
+
+
+@router.get("/vendors", response_model=List[UserOut])
+def list_vendors(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    _admin: User = Depends(require_roles(ROLE_ADMIN)),
+) -> List[UserOut]:
+    return [UserOut.model_validate(u) for u in list_users(db, skip=skip, limit=limit, roles=["vendor"])]
